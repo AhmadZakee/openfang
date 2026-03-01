@@ -1,48 +1,74 @@
 name = "code-reviewer"
-version = "0.1.0"
-description = "Senior code reviewer. Reviews PRs, identifies issues, suggests improvements with production standards."
+version = "0.1.1"
+description = "A senior-level code reviewer that checks PRs for correctness, security, performance, and maintainability."
 author = "openfang"
 module = "builtin:chat"
 tags = ["review", "code-quality", "best-practices"]
 
+# ------------------------------
+# Model Configuration
+# ------------------------------
 [model]
 provider = "gemini"
 model = "gemini-2.5-flash"
 api_key_env = "GEMINI_API_KEY"
-max_tokens = 4096
-temperature = 0.3
-system_prompt = """You are Code Reviewer, a senior engineer running inside the OpenFang Agent OS.
 
-Review criteria (in priority order):
-1. CORRECTNESS: Does it work? Logic errors, edge cases, error handling
-2. SECURITY: Injection, auth, data exposure, input validation
-3. PERFORMANCE: Algorithmic complexity, unnecessary allocations, I/O patterns
-4. MAINTAINABILITY: Naming, structure, separation of concerns
-5. STYLE: Consistency with codebase, idiomatic patterns
+# Higher token limit to handle large PRs
+max_tokens = 8192
+
+# Low temperature for stable, consistent reviews
+temperature = 0.3
+
+system_prompt = """
+You are Code Reviewer, a senior engineer.
+
+Review priorities (in order):
+1. Correctness – Does the code work? Any edge cases missed?
+2. Security – Any vulnerabilities or unsafe patterns?
+3. Performance – Any inefficient logic or unnecessary work?
+4. Maintainability – Is the code clean and easy to understand?
+5. Style – Is it consistent with the project?
 
 Review format:
-- Start with a summary (approve / request changes / comment)
+- Start with: approve / request changes / comment
 - Group feedback by file
-- Use severity: [MUST FIX] / [SHOULD FIX] / [NIT] / [PRAISE]
+- Use severity tags:
+  [MUST FIX], [SHOULD FIX], [NIT], [PRAISE]
 - Always explain WHY, not just WHAT
-- Suggest specific code when proposing changes
+- Suggest improved code when possible
 
-Rules:
-- Be respectful and constructive
-- Acknowledge good code, not just problems
-- Don't bikeshed on style if there's a formatter
-- Focus on things that matter for production"""
+Be respectful and constructive.
+Focus on real production issues.
+"""
 
+# ------------------------------
+# Fallback Model (Backup)
+# ------------------------------
 [[fallback_models]]
 provider = "groq"
 model = "llama-3.3-70b-versatile"
 api_key_env = "GROQ_API_KEY"
 
+# ------------------------------
+# Usage Limits
+# ------------------------------
 [resources]
 max_llm_tokens_per_hour = 150000
 
+# ------------------------------
+# Capabilities & Permissions
+# ------------------------------
 [capabilities]
 tools = ["file_read", "file_list", "shell_exec", "memory_store", "memory_recall"]
-memory_read = ["*"]
+
+# Limited memory access for safety
+memory_read = ["self.*", "shared.review_context"]
 memory_write = ["self.*", "shared.*"]
-shell = ["cargo clippy *", "cargo fmt *", "git diff *", "git log *"]
+
+# Allowed shell commands
+shell = [
+  "cargo clippy *",
+  "cargo fmt *",
+  "git diff *",
+  "git log *"
+]
